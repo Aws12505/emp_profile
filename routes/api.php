@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\StoreController;
 use App\Http\Controllers\Api\StatusController;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware('auth.verify')->group(function () {
 Route::apiResource('stores', StoreController::class);
 Route::apiResource('employees', EmpInfoController::class);
 Route::apiResource('employment-info', EmpEmploymentInfoController::class);
@@ -33,3 +34,4 @@ Route::get('daily-schedules/weekly/{empInfoId}', [DailyScheduleController::class
 // Weekly schedule processing routes
 Route::post('weekly-schedules/process', [DailyScheduleController::class, 'processWeeklySchedule']);
 Route::get('weekly-schedules/analysis', [DailyScheduleController::class, 'getWeeklyScheduleAnalysis']);
+});
