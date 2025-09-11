@@ -20,14 +20,6 @@ class WeeklyScheduleService
      *         'schedules' => [
      *             [
      *                 'emp_info_id' => 1,
-     *                 'employee' => [
-     *                     'id' => 1,
-     *                     'full_name' => 'John Doe',
-     *                     'skills' => [
-     *                         ['id' => 1, 'name' => 'PHP', 'slug' => 'php'],
-     *                         ['id' => 2, 'name' => 'Laravel', 'slug' => 'laravel']
-     *                     ]
-     *                 ],
      *                 'scheduled_start_time' => '09:00:00',
      *                 'scheduled_end_time' => '13:00:00',
      *                 'status_id' => 1,
@@ -35,7 +27,6 @@ class WeeklyScheduleService
      *             ],
      *             [
      *                 'emp_info_id' => 1,
-     *                 'employee' => [...],
      *                 'scheduled_start_time' => '14:00:00',
      *                 'scheduled_end_time' => '17:00:00',
      *                 'status_id' => 1,
@@ -46,6 +37,7 @@ class WeeklyScheduleService
      *     // ... more days in the week
      * ]
      * 
+     * Employee data is retrieved from database based on emp_info_id
      * Also supports legacy individual schedule format for backward compatibility
      */
     public function validateAndProcessWeeklySchedule(array $weeklyScheduleData): array
@@ -65,13 +57,19 @@ class WeeklyScheduleService
                 foreach ($dayData['schedules'] as $scheduleData) {
                     $scheduleData['date_of_day'] = $dayData['date_of_day'];
                     
+                    // Retrieve employee data from database
+                    $employee = EmpInfo::with('skills')->find($scheduleData['emp_info_id']);
+                    if (!$employee) {
+                        throw new \Exception("Employee with ID {$scheduleData['emp_info_id']} not found");
+                    }
+                    
                     // If there are validation violations, mark all schedules with exceptions
                     if ($hasViolations) {
                         $scheduleData['agree_on_exception'] = true;
                         $scheduleData['exception_notes'] = $this->formatExceptionNotes($validationResult['violations']);
                     }
                     
-                    // Remove embedded employee data before saving
+                    // Clean schedule data (removes any embedded employee data)
                     $cleanScheduleData = $this->cleanScheduleData($scheduleData);
                     
                     $schedule = DailySchedule::create($cleanScheduleData);
@@ -85,6 +83,12 @@ class WeeklyScheduleService
                 }
             } else {
                 // Legacy individual schedule format
+                // Retrieve employee data from database
+                $employee = EmpInfo::with('skills')->find($dayData['emp_info_id']);
+                if (!$employee) {
+                    throw new \Exception("Employee with ID {$dayData['emp_info_id']} not found");
+                }
+                
                 if ($hasViolations) {
                     $dayData['agree_on_exception'] = true;
                     $dayData['exception_notes'] = $this->formatExceptionNotes($validationResult['violations']);

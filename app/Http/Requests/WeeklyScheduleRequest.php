@@ -18,7 +18,7 @@ class WeeklyScheduleRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      * 
-     * Expected input structure (new day-level format):
+     * Expected input structure (employee data retrieved from database):
      * {
      *     "weekly_schedule": [
      *         {
@@ -26,25 +26,26 @@ class WeeklyScheduleRequest extends FormRequest
      *             "schedules": [
      *                 {
      *                     "emp_info_id": 1,
-     *                     "employee": {
-     *                         "id": 1,
-     *                         "full_name": "John Doe",
-     *                         "skills": [
-     *                             {"id": 1, "name": "PHP", "slug": "php"},
-     *                             {"id": 2, "name": "Laravel", "slug": "laravel"}
-     *                         ]
-     *                     },
      *                     "scheduled_start_time": "09:00:00",
      *                     "scheduled_end_time": "13:00:00",
+     *                     "actual_start_time": null,
+     *                     "actual_end_time": null,
+     *                     "vci": false,
      *                     "status_id": 1,
+     *                     "agree_on_exception": false,
+     *                     "exception_notes": null,
      *                     "required_skills": [1, 2]
      *                 },
      *                 {
      *                     "emp_info_id": 1,
-     *                     "employee": {...},
      *                     "scheduled_start_time": "14:00:00",
      *                     "scheduled_end_time": "17:00:00",
+     *                     "actual_start_time": null,
+     *                     "actual_end_time": null,
+     *                     "vci": false,
      *                     "status_id": 1,
+     *                     "agree_on_exception": false,
+     *                     "exception_notes": null,
      *                     "required_skills": [1]
      *                 }
      *             ]
@@ -53,6 +54,7 @@ class WeeklyScheduleRequest extends FormRequest
      *     ]
      * }
      * 
+     * Note: Employee details are retrieved from the database using emp_info_id
      * Also supports legacy individual schedule format for backward compatibility
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -88,14 +90,7 @@ class WeeklyScheduleRequest extends FormRequest
                 'weekly_schedule.*.schedules.*.required_skills' => 'nullable|array',
                 'weekly_schedule.*.schedules.*.required_skills.*' => 'integer|exists:skills,id',
                 
-                // Embedded employee data validation
-                'weekly_schedule.*.schedules.*.employee' => 'required|array',
-                'weekly_schedule.*.schedules.*.employee.id' => 'required|integer',
-                'weekly_schedule.*.schedules.*.employee.full_name' => 'required|string|max:255',
-                'weekly_schedule.*.schedules.*.employee.skills' => 'required|array',
-                'weekly_schedule.*.schedules.*.employee.skills.*.id' => 'required|integer|exists:skills,id',
-                'weekly_schedule.*.schedules.*.employee.skills.*.name' => 'required|string|max:255',
-                'weekly_schedule.*.schedules.*.employee.skills.*.slug' => 'required|string|max:255'
+                // Remove embedded employee data validation - backend will retrieve employee details
             ]);
         } else {
             // Legacy individual schedule format validation
@@ -113,14 +108,7 @@ class WeeklyScheduleRequest extends FormRequest
                 'weekly_schedule.*.required_skills' => 'nullable|array',
                 'weekly_schedule.*.required_skills.*' => 'integer|exists:skills,id',
                 
-                // Embedded employee data validation
-                'weekly_schedule.*.employee' => 'required|array',
-                'weekly_schedule.*.employee.id' => 'required|integer',
-                'weekly_schedule.*.employee.full_name' => 'required|string|max:255',
-                'weekly_schedule.*.employee.skills' => 'required|array',
-                'weekly_schedule.*.employee.skills.*.id' => 'required|integer|exists:skills,id',
-                'weekly_schedule.*.employee.skills.*.name' => 'required|string|max:255',
-                'weekly_schedule.*.employee.skills.*.slug' => 'required|string|max:255'
+                // Remove embedded employee data validation - backend will retrieve employee details
             ]);
         }
         
@@ -141,42 +129,12 @@ class WeeklyScheduleRequest extends FormRequest
     }
 
     /**
-     * Validate that employee IDs match between emp_info_id and embedded employee data
+     * Validate that employee IDs exist in the database
      */
     protected function validateEmployeeConsistency($validator)
     {
-        $weeklySchedule = $this->input('weekly_schedule', []);
-        $isNewFormat = !empty($weeklySchedule) && isset($weeklySchedule[0]['schedules']);
-        
-        if ($isNewFormat) {
-            // New day-level format validation
-            foreach ($weeklySchedule as $dayIndex => $day) {
-                if (isset($day['schedules'])) {
-                    foreach ($day['schedules'] as $scheduleIndex => $schedule) {
-                        if (isset($schedule['emp_info_id']) && isset($schedule['employee']['id'])) {
-                            if ($schedule['emp_info_id'] != $schedule['employee']['id']) {
-                                $validator->errors()->add(
-                                    "weekly_schedule.{$dayIndex}.schedules.{$scheduleIndex}.employee.id",
-                                    'Employee ID must match the emp_info_id field.'
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            // Legacy format validation
-            foreach ($weeklySchedule as $index => $schedule) {
-                if (isset($schedule['emp_info_id']) && isset($schedule['employee']['id'])) {
-                    if ($schedule['emp_info_id'] != $schedule['employee']['id']) {
-                        $validator->errors()->add(
-                            "weekly_schedule.{$index}.employee.id",
-                            'Employee ID must match the emp_info_id field.'
-                        );
-                    }
-                }
-            }
-        }
+        // Employee data will be retrieved by backend, just validate emp_info_id exists
+        // This validation is already handled by the exists:emp_infos,id rule
     }
 
     /**
@@ -425,22 +383,6 @@ class WeeklyScheduleRequest extends FormRequest
             'weekly_schedule.*.required_skills.array' => 'Required skills must be an array.',
             'weekly_schedule.*.required_skills.*.exists' => 'One or more selected skills do not exist.',
             
-            'weekly_schedule.*.employee.required' => 'Employee data is required for each schedule entry.',
-            'weekly_schedule.*.employee.array' => 'Employee data must be an object.',
-            
-            'weekly_schedule.*.employee.id.required' => 'Employee ID is required in employee data.',
-            'weekly_schedule.*.employee.full_name.required' => 'Employee full name is required.',
-            'weekly_schedule.*.employee.full_name.max' => 'Employee full name cannot exceed 255 characters.',
-            
-            'weekly_schedule.*.employee.skills.required' => 'Employee skills data is required.',
-            'weekly_schedule.*.employee.skills.array' => 'Employee skills must be an array.',
-            
-            'weekly_schedule.*.employee.skills.*.id.required' => 'Skill ID is required for each skill.',
-            'weekly_schedule.*.employee.skills.*.id.exists' => 'One or more skills do not exist.',
-            
-            'weekly_schedule.*.employee.skills.*.name.required' => 'Skill name is required.',
-            'weekly_schedule.*.employee.skills.*.slug.required' => 'Skill slug is required.',
-            
             'weekly_schedule.*.exception_notes.max' => 'Exception notes cannot exceed 1000 characters.'
         ];
     }
@@ -460,10 +402,6 @@ class WeeklyScheduleRequest extends FormRequest
             'weekly_schedule.*.actual_end_time' => 'actual end time',
             'weekly_schedule.*.status_id' => 'status',
             'weekly_schedule.*.required_skills' => 'required skills',
-            'weekly_schedule.*.employee' => 'employee data',
-            'weekly_schedule.*.employee.id' => 'employee ID',
-            'weekly_schedule.*.employee.full_name' => 'employee name',
-            'weekly_schedule.*.employee.skills' => 'employee skills',
             'weekly_schedule.*.exception_notes' => 'exception notes'
         ];
     }

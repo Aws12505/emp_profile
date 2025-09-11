@@ -38,7 +38,8 @@ class DailyScheduleRequest extends FormRequest
                 'schedules.*.agree_on_exception' => 'boolean',
                 'schedules.*.exception_notes' => 'nullable|string|max:1000',
                 'schedules.*.required_skills' => 'nullable|array',
-                'schedules.*.required_skills.*' => 'exists:skills,id'
+                'schedules.*.required_skills.*' => 'exists:skills,id',
+                // Remove embedded employee data validation - backend will retrieve employee details
             ];
         }
         

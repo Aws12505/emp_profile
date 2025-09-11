@@ -10,11 +10,11 @@ The Weekly Schedule API provides endpoints for processing and validating complet
 
 **POST** `/api/weekly-schedules/process`
 
-Processes and validates a complete weekly schedule array with embedded employee data.
+Processes and validates a complete weekly schedule array. Employee data is retrieved from the database using emp_info_id.
 
 #### Request Structure
 
-**New Day-Level Format (Recommended - Supports Split Shifts)**:
+**Day-Level Format (Recommended - Supports Split Shifts)**:
 
 ```json
 {
@@ -32,30 +32,6 @@ Processes and validates a complete weekly schedule array with embedded employee 
           "status_id": 1,
           "agree_on_exception": false,
           "exception_notes": null,
-          "employee": {
-            "emp_info_id": 1,
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john.doe@company.com",
-            "skills": [
-              {
-                "skill_id": 1,
-                "skill_name": "Customer Service",
-                "rating": 4
-              },
-              {
-                "skill_id": 2,
-                "skill_name": "Cash Handling",
-                "rating": 5
-              }
-            ],
-            "employment_info": {
-              "position_id": 1,
-              "store_id": 1,
-              "max_weekly_hours": 40,
-              "status": "active"
-            }
-          },
           "required_skills": [1, 2]
         },
         {
@@ -68,30 +44,6 @@ Processes and validates a complete weekly schedule array with embedded employee 
           "status_id": 1,
           "agree_on_exception": false,
           "exception_notes": null,
-          "employee": {
-            "emp_info_id": 1,
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john.doe@company.com",
-            "skills": [
-              {
-                "skill_id": 1,
-                "skill_name": "Customer Service",
-                "rating": 4
-              },
-              {
-                "skill_id": 2,
-                "skill_name": "Cash Handling",
-                "rating": 5
-              }
-            ],
-            "employment_info": {
-              "position_id": 1,
-              "store_id": 1,
-              "max_weekly_hours": 40,
-              "status": "active"
-            }
-          },
           "required_skills": [1]
         }
       ]
@@ -109,30 +61,6 @@ Processes and validates a complete weekly schedule array with embedded employee 
           "status_id": 1,
           "agree_on_exception": false,
           "exception_notes": null,
-          "employee": {
-            "emp_info_id": 2,
-            "first_name": "Jane",
-            "last_name": "Smith",
-            "email": "jane.smith@company.com",
-            "skills": [
-              {
-                "skill_id": 1,
-                "skill_name": "Customer Service",
-                "rating": 5
-              },
-              {
-                "skill_id": 3,
-                "skill_name": "Inventory Management",
-                "rating": 4
-              }
-            ],
-            "employment_info": {
-              "position_id": 2,
-              "store_id": 1,
-              "max_weekly_hours": 35,
-              "status": "active"
-            }
-          },
           "required_skills": [1, 3]
         }
       ]
@@ -140,6 +68,8 @@ Processes and validates a complete weekly schedule array with embedded employee 
   ]
 }
 ```
+
+**Note**: Employee details (name, skills, employment info) are automatically retrieved from the database using the `emp_info_id`.
 
 **Legacy Format (Backward Compatible)**:
 
@@ -157,34 +87,17 @@ Processes and validates a complete weekly schedule array with embedded employee 
       "status_id": 1,
       "agree_on_exception": false,
       "exception_notes": null,
-      "employee": {
-        "emp_info_id": 1,
-        "first_name": "John",
-        "last_name": "Doe",
-        "email": "john.doe@company.com",
-        "skills": [
-          {
-            "skill_id": 1,
-            "skill_name": "Customer Service",
-            "rating": 4
-          }
-        ],
-        "employment_info": {
-          "position_id": 1,
-          "store_id": 1,
-          "max_weekly_hours": 40,
-          "status": "active"
-        }
-      },
       "required_skills": [1]
     }
   ]
 }
 ```
 
+**Note**: Employee details are retrieved from the database using `emp_info_id` for both formats.
+
 #### Validation Rules
 
-**New Day-Level Format**:
+**Day-Level Format**:
 
 1. **Weekly Schedule Array**:
    - Must be an array with at least 1 day entry
@@ -205,7 +118,6 @@ Processes and validates a complete weekly schedule array with embedded employee 
    - `status_id`: Required, integer, must exist in statuses table
    - `agree_on_exception`: Optional, boolean, defaults to false
    - `exception_notes`: Optional, text
-   - `employee`: Required object with complete employee data
    - `required_skills`: Optional array of skill IDs
 
 4. **Split Shift Validation**:
@@ -231,16 +143,11 @@ Processes and validates a complete weekly schedule array with embedded employee 
    - `status_id`: Required, integer, must exist in statuses table
    - `agree_on_exception`: Optional, boolean, defaults to false
    - `exception_notes`: Optional, text
-   - `employee`: Required object with complete employee data
    - `required_skills`: Optional array of skill IDs
 
-3. **Employee Data**:
-   - `emp_info_id`: Required, must be consistent across all entries for the same employee
-   - `first_name`, `last_name`, `email`: Required strings
-   - `skills`: Required array with skill objects containing skill_id, skill_name, and rating
-   - `employment_info`: Required object with position_id, store_id, max_weekly_hours, and status
+**Note**: Employee data (name, skills, employment info) is automatically retrieved from the database using `emp_info_id`.
 
-4. **Business Rules**:
+3. **Business Rules**:
    - Employee cannot exceed their maximum weekly hours
    - Employee cannot be scheduled for overlapping time slots
    - All required skills for each day must be covered by scheduled employees
@@ -257,18 +164,19 @@ Processes and validates a complete weekly schedule array with embedded employee 
   "success": true,
   "message": "Weekly schedule processed successfully",
   "data": {
-    "processed_schedules": 2,
-    "total_hours": 16,
+    "processed_schedules": 5,
+    "total_hours": 40.0,
     "employees_scheduled": 2,
-    "skill_coverage": {
-      "covered_skills": [1, 2, 3],
-      "missing_skills": []
-    },
-    "validation_summary": {
-      "hours_violations": [],
-      "skill_violations": [],
-      "conflict_violations": []
-    }
+    "schedule_summary": [
+      {
+        "date_of_day": "2024-01-15",
+        "employee_ids": [1, 2],
+        "total_hours": 16.0,
+        "schedule_count": 3,
+        "exceptions": 0,
+        "required_skills": [1, 2, 3]
+      }
+    ]
   }
 }
 ```
@@ -276,28 +184,16 @@ Processes and validates a complete weekly schedule array with embedded employee 
 **Validation Error Response (422)**:
 ```json
 {
-  "success": false,
-  "message": "Validation failed",
+  "message": "The given data was invalid.",
   "errors": {
-    "weekly_schedule.0.end_time": ["End time must be after start time"],
-    "weekly_schedule.1.employee.skills": ["Employee must have required skills"]
-  },
-  "violations": {
-    "hours_violations": [
-      {
-        "employee_id": 1,
-        "scheduled_hours": 45,
-        "max_hours": 40,
-        "violation": "Exceeds maximum weekly hours by 5 hours"
-      }
+    "weekly_schedule.0.schedules.0.scheduled_end_time": [
+      "The scheduled end time must be after the start time."
     ],
-    "skill_violations": [
-      {
-        "date": "2024-01-15",
-        "required_skills": [1, 2],
-        "missing_skills": [2],
-        "violation": "Required skill 'Cash Handling' not covered"
-      }
+    "weekly_schedule.1.schedules.0.emp_info_id": [
+      "The selected emp info id is invalid."
+    ],
+    "weekly_schedule.2.date_of_day": [
+      "The date of day field is required."
     ]
   }
 }
@@ -357,9 +253,9 @@ Provides comprehensive analysis of weekly schedule patterns and constraints.
 
 ### 1. Data Preparation
 
-- Ensure all employee data is complete before sending the request
+- Only send `emp_info_id` in schedule entries - employee details are retrieved automatically
 - Validate time formats on the frontend to prevent server-side errors
-- Include all required employee skills and employment information
+- Ensure `emp_info_id` exists and is valid before sending requests
 
 ### 2. Error Handling
 
@@ -377,7 +273,7 @@ Provides comprehensive analysis of weekly schedule patterns and constraints.
 ### 4. Performance Considerations
 
 - Batch weekly schedules rather than sending individual day requests
-- Cache employee data to avoid redundant API calls
+- Reduced payload size due to no embedded employee data
 - Use the analysis endpoint to pre-validate scheduling constraints
 
 ## Example Usage
@@ -388,27 +284,21 @@ Provides comprehensive analysis of weekly schedule patterns and constraints.
 const weeklyScheduleData = {
   weekly_schedule: [
     {
-      date: '2024-01-15',
-      start_time: '09:00:00',
-      end_time: '17:00:00',
-      status: 'scheduled',
-      employee: {
-        emp_info_id: 1,
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john.doe@company.com',
-        skills: [
-          { skill_id: 1, skill_name: 'Customer Service', rating: 4 },
-          { skill_id: 2, skill_name: 'Cash Handling', rating: 5 }
-        ],
-        employment_info: {
-          position_id: 1,
-          store_id: 1,
-          max_weekly_hours: 40,
-          status: 'active'
+      date_of_day: '2024-01-15',
+      schedules: [
+        {
+          emp_info_id: 1,
+          scheduled_start_time: '09:00:00',
+          scheduled_end_time: '17:00:00',
+          actual_start_time: null,
+          actual_end_time: null,
+          vci: false,
+          status_id: 1,
+          agree_on_exception: false,
+          exception_notes: null,
+          required_skills: [1, 2]
         }
-      },
-      required_skills: [1, 2]
+      ]
     }
   ]
 };
@@ -427,7 +317,6 @@ fetch('/api/weekly-schedules/process', {
     console.log('Schedule processed successfully:', data.data);
   } else {
     console.error('Validation errors:', data.errors);
-    console.error('Business rule violations:', data.violations);
   }
 })
 .catch(error => {

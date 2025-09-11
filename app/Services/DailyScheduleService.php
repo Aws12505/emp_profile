@@ -15,6 +15,12 @@ class DailyScheduleService
      */
     public function createSchedule(array $data): array
     {
+        // Retrieve employee data from database to validate existence
+         $employee = EmpInfo::with('skills')->find($data['emp_info_id']);
+         if (!$employee) {
+             throw new \Exception("Employee with ID {$data['emp_info_id']} not found");
+         }
+        
         $validationResult = $this->validateBusinessRules($data);
         
         // If validation fails, set agree_on_exception to true
@@ -23,7 +29,10 @@ class DailyScheduleService
             $data['exception_notes'] = $this->formatExceptionNotes($validationResult['violations']);
         }
         
-        $schedule = DailySchedule::create($data);
+        // Remove any embedded employee data before saving
+        $cleanData = $this->cleanScheduleData($data);
+        
+        $schedule = DailySchedule::create($cleanData);
         
         // Attach required skills if provided
         if (isset($data['required_skills'])) {
@@ -48,13 +57,22 @@ class DailyScheduleService
             // Add the date to each schedule
             $scheduleData['date_of_day'] = $date;
             
+            // Retrieve employee data from database to validate existence
+            $employee = EmpInfo::with('skills')->find($scheduleData['emp_info_id']);
+            if (!$employee) {
+                throw new \Exception("Employee with ID {$scheduleData['emp_info_id']} not found");
+            }
+            
             // If day-level validation fails, mark all schedules with exceptions
             if (!$validationResult['valid']) {
                 $scheduleData['agree_on_exception'] = true;
                 $scheduleData['exception_notes'] = $this->formatExceptionNotes($validationResult['violations']);
             }
             
-            $schedule = DailySchedule::create($scheduleData);
+            // Remove any embedded employee data before saving
+            $cleanScheduleData = $this->cleanScheduleData($scheduleData);
+            
+            $schedule = DailySchedule::create($cleanScheduleData);
             
             // Attach required skills if provided
             if (isset($scheduleData['required_skills'])) {
@@ -453,5 +471,24 @@ class DailyScheduleService
             'available_skills' => $allAvailableSkills->toArray(),
             'skill_coverage_complete' => $allRequiredSkills->diff($allAvailableSkills)->isEmpty()
         ];
+    }
+    
+    /**
+     * Clean schedule data by removing embedded employee information
+     */
+    protected function cleanScheduleData(array $scheduleData): array
+    {
+        // Remove embedded employee data as it's not part of the database schema
+        unset($scheduleData['employee']);
+        
+        // Calculate scheduled_hours if not provided
+        if (!isset($scheduleData['scheduled_hours'])) {
+            $scheduleData['scheduled_hours'] = $this->calculateScheduledHours(
+                $scheduleData['scheduled_start_time'],
+                $scheduleData['scheduled_end_time']
+            );
+        }
+        
+        return $scheduleData;
     }
 }

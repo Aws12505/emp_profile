@@ -140,33 +140,31 @@ class DailyScheduleController extends Controller
     /**
      * Process and validate a complete weekly schedule
      * 
-     * Expected input structure:
+     * Expected input structure (employee data retrieved from database):
      * {
      *     "weekly_schedule": [
      *         {
      *             "date_of_day": "2024-01-15",
-     *             "emp_info_id": 1,
-     *             "employee": {
-     *                 "id": 1,
-     *                 "full_name": "John Doe",
-     *                 "skills": [
-     *                     {"id": 1, "name": "PHP", "slug": "php"},
-     *                     {"id": 2, "name": "Laravel", "slug": "laravel"}
-     *                 ]
-     *             },
-     *             "scheduled_start_time": "09:00:00",
-     *             "scheduled_end_time": "17:00:00",
-     *             "actual_start_time": null,
-     *             "actual_end_time": null,
-     *             "vci": false,
-     *             "status_id": 1,
-     *             "required_skills": [1, 2],
-     *             "agree_on_exception": false,
-     *             "exception_notes": null
+     *             "schedules": [
+     *                 {
+     *                     "emp_info_id": 1,
+     *                     "scheduled_start_time": "09:00:00",
+     *                     "scheduled_end_time": "17:00:00",
+     *                     "actual_start_time": null,
+     *                     "actual_end_time": null,
+     *                     "vci": false,
+     *                     "status_id": 1,
+     *                     "required_skills": [1, 2],
+     *                     "agree_on_exception": false,
+     *                     "exception_notes": null
+     *                 }
+     *             ]
      *         }
      *         // ... more daily schedules for the week
      *     ]
      * }
+     * 
+     * Note: Employee details are retrieved from the database using emp_info_id
      * 
      * @param WeeklyScheduleRequest $request
      * @return \Illuminate\Http\JsonResponse
