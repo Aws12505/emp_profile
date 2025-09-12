@@ -26,6 +26,8 @@ Route::post('employees/{employee}/skills/{skill}', [EmpInfoController::class, 'a
 Route::delete('employees/{employee}/skills/{skill}', [EmpInfoController::class, 'detachSkill']);
 Route::put('employees/{employee}/skills/{skill}', [EmpInfoController::class, 'updateSkillRating']);
 
+Route::get('stores/{storeId}/employees', [EmpInfoController::class, 'getUsersByStoreId']);
+
 // Additional routes for daily schedule skills
 Route::post('daily-schedules/{dailySchedule}/skills/{skill}', [DailyScheduleController::class, 'attachSkill']);
 Route::delete('daily-schedules/{dailySchedule}/skills/{skill}', [DailyScheduleController::class, 'detachSkill']);

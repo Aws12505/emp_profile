@@ -7,6 +7,7 @@ use App\Models\EmpInfo;
 use App\Models\Skill;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
 
 class EmpInfoController extends Controller
 {
@@ -84,4 +85,28 @@ class EmpInfoController extends Controller
         $employee->skills()->updateExistingPivot($skill->id, ['rating' => $validated['rating']]);
         return response()->noContent();
     }
+
+    public function getUsersByStoreId(Request $request, int $storeId)
+{
+    // Validate path + optional query params
+    $validated = Validator::make(
+        array_merge(['store_id' => $storeId], $request->only(['status', 'per_page'])),
+        [
+            'store_id' => 'required|exists:stores,id',
+            'status'   => ['nullable', Rule::in(['Active', 'Suspension', 'Terminated', 'On Leave'])],
+            'per_page' => 'nullable|integer|min:1|max:100'
+        ]
+    )->validate();
+
+    $query = EmpInfo::with(['store', 'skills', 'schedulePreferences', 'employmentInfo'])
+        ->where('store_id', $validated['store_id']);
+
+    if (!empty($validated['status'])) {
+        $query->where('status', $validated['status']);
     }
+
+    $perPage = $validated['per_page'] ?? 15;
+
+    return $query->paginate($perPage);
+}
+}
