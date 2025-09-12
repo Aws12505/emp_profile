@@ -86,13 +86,13 @@ class EmpInfoController extends Controller
         return response()->noContent();
     }
 
-    public function getUsersByStoreId(Request $request, int $storeId)
+   public function getUsersByStoreId(Request $request, string $storeId)
 {
     // Validate path + optional query params
     $validated = Validator::make(
         array_merge(['store_id' => $storeId], $request->only(['status', 'per_page'])),
         [
-            'store_id' => 'required|exists:stores,id',
+            'store_id' => 'required|exists:stores,id', // id column is string-based
             'status'   => ['nullable', Rule::in(['Active', 'Suspension', 'Terminated', 'On Leave'])],
             'per_page' => 'nullable|integer|min:1|max:100'
         ]
