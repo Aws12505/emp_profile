@@ -26,7 +26,7 @@ class DailyScheduleController extends Controller
     }
     public function index(Request $request)
     {
-        $query = DailySchedule::with(['empInfo', 'status', 'requiredSkills']);
+        $query = DailySchedule::with(['empInfo', 'status']);
         
         // Filter by date range if provided
         if ($request->has('start_date')) {
@@ -42,7 +42,24 @@ class DailyScheduleController extends Controller
             $query->where('emp_info_id', $request->emp_info_id);
         }
         
-        return $query->orderBy('date_of_day')->get();
+        $schedules = $query->orderBy('date_of_day')->get();
+        
+        // Transform the response to only include necessary fields
+        return $schedules->map(function ($schedule) {
+            $data = $schedule->toArray();
+            
+            // Only include agree_on_exception if it's true
+            if (!$schedule->agree_on_exception) {
+                unset($data['agree_on_exception']);
+            }
+            
+            // Only include exception_notes if agree_on_exception is true and notes exist
+            if (!$schedule->agree_on_exception || !$schedule->exception_notes) {
+                unset($data['exception_notes']);
+            }
+            
+            return $data;
+        });
     }
 
     public function store(DailyScheduleRequest $request)
@@ -82,7 +99,25 @@ class DailyScheduleController extends Controller
 
     public function show(DailySchedule $dailySchedule)
     {
-        return $dailySchedule->load(['empInfo', 'status', 'requiredSkills']);
+        $schedule = $dailySchedule->load(['empInfo', 'status']);
+        $data = $schedule->toArray();
+        
+        // Only include agree_on_exception if it's true
+        if (!$schedule->agree_on_exception) {
+            unset($data['agree_on_exception']);
+        }
+        
+        // Only include exception_notes if agree_on_exception is true and notes exist
+        if (!$schedule->agree_on_exception || !$schedule->exception_notes) {
+            unset($data['exception_notes']);
+        }
+        
+        // Only load required skills if they exist
+        if ($schedule->requiredSkills()->exists()) {
+            $data['required_skills'] = $schedule->requiredSkills;
+        }
+        
+        return $data;
     }
 
     public function update(DailyScheduleRequest $request, DailySchedule $dailySchedule)
@@ -127,14 +162,36 @@ class DailyScheduleController extends Controller
         $weekStart = DailySchedule::getWorkWeekStart($validated['date']);
         $weekEnd = DailySchedule::getWorkWeekEnd($validated['date']);
 
-        $query = DailySchedule::with(['empInfo', 'status', 'requiredSkills'])
+        $query = DailySchedule::with(['empInfo', 'status'])
             ->whereBetween('date_of_day', [$weekStart, $weekEnd]);
 
         if (isset($validated['emp_info_id'])) {
             $query->where('emp_info_id', $validated['emp_info_id']);
         }
 
-        return $query->orderBy('date_of_day')->get();
+        $schedules = $query->orderBy('date_of_day')->get();
+        
+        // Transform the response to only include necessary fields
+        return $schedules->map(function ($schedule) {
+            $data = $schedule->toArray();
+            
+            // Only include agree_on_exception if it's true
+            if (!$schedule->agree_on_exception) {
+                unset($data['agree_on_exception']);
+            }
+            
+            // Only include exception_notes if agree_on_exception is true and notes exist
+            if (!$schedule->agree_on_exception || !$schedule->exception_notes) {
+                unset($data['exception_notes']);
+            }
+            
+            // Only load required skills if they exist
+            if ($schedule->requiredSkills()->exists()) {
+                $data['required_skills'] = $schedule->requiredSkills;
+            }
+            
+            return $data;
+        });
     }
 
     /**

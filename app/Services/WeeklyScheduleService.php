@@ -142,20 +142,26 @@ class WeeklyScheduleService
     private function transformApiToDbFormat(array $weeklyScheduleData): array
     {
         return array_map(function ($schedule) {
-            return [
+            $transformed = [
                 'date_of_day' => $schedule['date'],
                 'scheduled_start_time' => $schedule['start_time'],
                 'scheduled_end_time' => $schedule['end_time'],
                 'status_id' => $schedule['status'] === 'scheduled' ? 1 : 2, // Assuming status mapping
                 'emp_info_id' => $schedule['employee']['emp_info_id'],
                 'employee' => $schedule['employee'],
-                'required_skills' => $schedule['required_skills'] ?? [],
                 // Keep original fields for backward compatibility
                 'date' => $schedule['date'],
                 'start_time' => $schedule['start_time'],
                 'end_time' => $schedule['end_time'],
                 'status' => $schedule['status']
             ];
+            
+            // Only include required_skills if they are provided and not empty
+            if (isset($schedule['required_skills']) && !empty($schedule['required_skills'])) {
+                $transformed['required_skills'] = $schedule['required_skills'];
+            }
+            
+            return $transformed;
         }, $weeklyScheduleData);
     }
     

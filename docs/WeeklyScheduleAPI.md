@@ -30,9 +30,6 @@ Processes and validates a complete weekly schedule array. Employee data is retri
           "actual_end_time": null,
           "vci": false,
           "status_id": 1,
-          "agree_on_exception": false,
-          "exception_notes": null,
-          "required_skills": [1, 2]
         },
         {
           "emp_info_id": 1,
@@ -42,9 +39,6 @@ Processes and validates a complete weekly schedule array. Employee data is retri
           "actual_end_time": null,
           "vci": false,
           "status_id": 1,
-          "agree_on_exception": false,
-          "exception_notes": null,
-          "required_skills": [1]
         }
       ]
     },
@@ -59,9 +53,6 @@ Processes and validates a complete weekly schedule array. Employee data is retri
           "actual_end_time": null,
           "vci": false,
           "status_id": 1,
-          "agree_on_exception": false,
-          "exception_notes": null,
-          "required_skills": [1, 3]
         }
       ]
     }
@@ -69,7 +60,9 @@ Processes and validates a complete weekly schedule array. Employee data is retri
 }
 ```
 
-**Note**: Employee details (name, skills, employment info) are automatically retrieved from the database using the `emp_info_id`.
+**Note**: 
+- Employee details (name, skills, employment info) are automatically retrieved from the database using the `emp_info_id`
+- Optional fields like `agree_on_exception` and `exception_notes` can be included in requests but are only returned in responses when they have meaningful values
 
 **Legacy Format (Backward Compatible)**:
 
@@ -85,15 +78,15 @@ Processes and validates a complete weekly schedule array. Employee data is retri
       "actual_end_time": null,
       "vci": false,
       "status_id": 1,
-      "agree_on_exception": false,
-      "exception_notes": null,
       "required_skills": [1]
     }
   ]
 }
 ```
 
-**Note**: Employee details are retrieved from the database using `emp_info_id` for both formats.
+**Note**: 
+- Employee details are retrieved from the database using `emp_info_id` for both formats
+- Optional fields like `agree_on_exception` and `exception_notes` can be included in requests but are only returned in responses when they have meaningful values
 
 #### Validation Rules
 
@@ -116,9 +109,9 @@ Processes and validates a complete weekly schedule array. Employee data is retri
    - `actual_end_time`: Optional, valid time format (H:i:s)
    - `vci`: Optional, boolean
    - `status_id`: Required, integer, must exist in statuses table
-   - `agree_on_exception`: Optional, boolean, defaults to false
-   - `exception_notes`: Optional, text
-   - `required_skills`: Optional array of skill IDs
+   - `agree_on_exception`: Optional, boolean, defaults to false (only included in responses when true)
+   - `exception_notes`: Optional, text (only included in responses when not empty)
+   - `required_skills`: Optional array of skill IDs (only included in responses when skills are assigned)
 
 4. **Split Shift Validation**:
    - Multiple schedules for the same employee on the same day are allowed
@@ -141,9 +134,9 @@ Processes and validates a complete weekly schedule array. Employee data is retri
    - `actual_end_time`: Optional, valid time format (H:i:s)
    - `vci`: Optional, boolean
    - `status_id`: Required, integer, must exist in statuses table
-   - `agree_on_exception`: Optional, boolean, defaults to false
-   - `exception_notes`: Optional, text
-   - `required_skills`: Optional array of skill IDs
+   - `agree_on_exception`: Optional, boolean, defaults to false (only included in responses when true)
+   - `exception_notes`: Optional, text (only included in responses when not empty)
+   - `required_skills`: Optional array of skill IDs (only included in responses when skills are assigned)
 
 **Note**: Employee data (name, skills, employment info) is automatically retrieved from the database using `emp_info_id`.
 
@@ -180,6 +173,13 @@ Processes and validates a complete weekly schedule array. Employee data is retri
   }
 }
 ```
+
+**Note on Response Fields**: The API now returns cleaner responses by conditionally including certain fields:
+- `required_skills`: Only included if skills are actually assigned to the schedule
+- `agree_on_exception`: Only included when set to `true` (validation failures or explicit exceptions)
+- `exception_notes`: Only included when there are actual exception notes to display
+
+This optimization reduces response payload size and eliminates unnecessary null/empty values in API responses.
 
 **Validation Error Response (422)**:
 ```json
@@ -276,6 +276,17 @@ Provides comprehensive analysis of weekly schedule patterns and constraints.
 - Reduced payload size due to no embedded employee data
 - Use the analysis endpoint to pre-validate scheduling constraints
 
+### 5. API Response Handling
+
+- **Conditional Fields**: The API now returns cleaner responses by only including certain fields when they have meaningful values:
+  - `required_skills`: Only present when skills are actually assigned
+  - `agree_on_exception`: Only present when set to `true`
+  - `exception_notes`: Only present when there are actual notes
+- **Frontend Considerations**: 
+  - Check for field existence before accessing these optional fields
+  - Use optional chaining or null checks when displaying these values
+  - Don't assume these fields will always be present in responses
+
 ## Example Usage
 
 ### JavaScript/Fetch Example
@@ -294,8 +305,8 @@ const weeklyScheduleData = {
           actual_end_time: null,
           vci: false,
           status_id: 1,
-          agree_on_exception: false,
-          exception_notes: null,
+          // Note: agree_on_exception, exception_notes, and required_skills
+          // are optional in requests and conditionally returned in responses
           required_skills: [1, 2]
         }
       ]
@@ -315,6 +326,20 @@ fetch('/api/weekly-schedules/process', {
 .then(data => {
   if (data.success) {
     console.log('Schedule processed successfully:', data.data);
+    
+    // Handle conditional fields in response
+    data.data.schedule_summary.forEach(schedule => {
+      // Use optional chaining for conditional fields
+      if (schedule.required_skills) {
+        console.log('Required skills:', schedule.required_skills);
+      }
+      if (schedule.agree_on_exception) {
+        console.log('Exception agreed:', schedule.agree_on_exception);
+      }
+      if (schedule.exception_notes) {
+        console.log('Exception notes:', schedule.exception_notes);
+      }
+    });
   } else {
     console.error('Validation errors:', data.errors);
   }

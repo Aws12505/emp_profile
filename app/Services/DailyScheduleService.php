@@ -100,6 +100,10 @@ class DailyScheduleService
         if (!$validationResult['valid']) {
             $data['agree_on_exception'] = true;
             $data['exception_notes'] = $this->formatExceptionNotes($validationResult['violations']);
+        } else {
+            // If validation passes, ensure agree_on_exception is false or not set
+            $data['agree_on_exception'] = false;
+            $data['exception_notes'] = null;
         }
         
         $schedule->update($data);
@@ -109,8 +113,14 @@ class DailyScheduleService
             $schedule->requiredSkills()->sync($data['required_skills']);
         }
         
+        // Load relationships conditionally
+        $relationships = ['empInfo', 'status'];
+        if ($schedule->requiredSkills()->exists()) {
+            $relationships[] = 'requiredSkills';
+        }
+        
         return [
-            'schedule' => $schedule->load(['empInfo', 'status', 'requiredSkills']),
+            'schedule' => $schedule->load($relationships),
             'validation_result' => $validationResult
         ];
     }
